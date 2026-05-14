@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mr.B — Dual-Market Paper Trade Dashboard</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/prop-types@15/prop-types.min.js" crossorigin></script>
+  <script src="https://unpkg.com/recharts@2/umd/Recharts.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script src="./dashboard_data.js"></script>
+
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+
+<div id="root" class="p-6 max-w-7xl mx-auto"></div>
+
+<script type="text/babel" data-presets="react">
+const { useMemo } = React;
+const {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+} = Recharts;
+
+// ---------- helpers ----------
+
+function formatINR(n) {
+  if (n === null || n === undefined || Number.isNaN(n)) return "—";
+  const neg = n < 0;
+  const abs = Math.abs(Math.round(n));
+  const s = abs.toString();
+  if (s.length <= 3) return (neg ? "-" : "") + s;
+  const last3 = s.slice(-3);
+  let rest = s.slice(0, -3);
+  rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",");
+  return (neg ? "-" : "") + rest + "," + last3;
+}
+
+function formatUSD(n) {
+  if (n === null || n === undefined || Number.isNaN(n)) return "—";
+  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatMoney(n, currency) {
+  return currency === "INR" ? formatINR(n) : formatUSD(n);
+}
+
+function formatPct(n, digits = 2) {
+  if (n === null || n === undefined || Number.isNaN(n)) return "—";
+  const sign = n > 0 ? "+" : n < 0 ? "" : "";
+  return sign + n.toFixed(digits) + "%";
+}
+
+function colorFor(value) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "text-slate-500";
+  if (value > 0) return "text-emerald-600";
+  if (value < 0) return "text-rose-600";
+  return "text-slate-700";
+}
+
+// ---------- components ----------
+
+function Header({ data }) {
+  if (!data) return null;
+  return (
+    <header className="mb-6">
+      <h1 className="text-2xl font-semibold tracking-tight">Mr.B — Paper Trade Dashboard</h1>
+      <p className="text-sm text-slate-500 mt-1">
+        Strategy {data.strategy_start} → {data.strategy_end} · Updated {data.updated_at}
+      </p>
+    </header>
+  );
+}
+
+function MarketCard({ market }) {
+  if (!market) return null;
+  const sym = market.currency_symbol;
+  return (
+    <section className="bg-white rounded-xl shadow-sm p-5 border border-slate-200">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-lg font-medium">{market.label}</h2>
+        <span className="text-xs uppercase tracking-wide text-slate-400">{market.currency}</span>
+      </div>
+      <div className="mt-3 flex items-baseline gap-3">
+        <div className="text-3xl font-semibold">
+          {sym}{formatMoney(market.current_nav, market.currency)}
+        </div>
+        <div className={`text-sm font-medium ${colorFor(market.todays_pnl)}`}>
+          {market.todays_pnl >= 0 ? "+" : ""}
+          {sym}{formatMoney(market.todays_pnl, market.currency)} ({formatPct(market.todays_pnl_pct)})
+          <span className="text-slate-400 ml-1">today</span>
+        </div>
+      </div>
+      <dl className="mt-4 grid grid-cols-2 gap-y-2 gap-x-6 text-sm">
+        <dt className="text-slate-500">Starting NAV</dt>
+        <dd className="text-right">{sym}{formatMoney(market.starting_nav, market.currency)}</dd>
+        <dt className="text-slate-500">Total return</dt>
+        <dd className={`text-right ${colorFor(market.total_return_pct)}`}>
+          {formatPct(market.total_return_pct)}
+        </dd>
+        <dt className="text-slate-500">Benchmark</dt>
+        <dd className={`text-right ${colorFor(market.benchmark_return_pct)}`}>
+          {formatPct(market.benchmark_return_pct)}
+        </dd>
+        <dt className="text-slate-500">Alpha</dt>
+        <dd className={`text-right ${colorFor(market.alpha_pct)}`}>
+          {formatPct(market.alpha_pct)}
+        </dd>
+        <dt className="text-slate-500">Peak NAV</dt>
+        <dd className="text-right">{sym}{formatMoney(market.peak_nav, market.currency)}</dd>
+        <dt className="text-slate-500">Drawdown</dt>
+        <dd className={`text-right ${market.drawdown_pct >= 15 ? "text-rose-600 font-medium" : "text-slate-700"}`}>
+          {formatPct(-Math.abs(market.drawdown_pct || 0))}
+        </dd>
+      </dl>
+    </section>
+  );
+}
+
+function NavChart({ market }) {
+  if (!market || !market.nav_history || market.nav_history.length === 0) {
+    return (
+      <section className="bg-white rounded-xl shadow-sm p-5 border border-slate-200">
+        <h3 className="text-md font-medium">{market ? market.label : "—"} · NAV history</h3>
+        <p className="text-sm text-slate-500 mt-2">No history yet.</p>
+      </section>
+    );
+  }
+  const sym = market.currency_symbol;
+  // Rebase benchmark to starting NAV so it's visually comparable on the same axis.
+  const startBench = market.nav_history[0].benchmark;
+  const data = market.nav_history.map((d) => ({
+    date: d.date,
+    nav: d.nav,
+    benchmark_rebased: startBench ? (d.benchmark / startBench) * market.starting_nav : null,
+  }));
+  return (
+    <section className="bg-white rounded-xl shadow-sm p-5 border border-slate-200">
+      <h3 className="text-md font-medium mb-2">{market.label} · NAV vs benchmark</h3>
+      <div style={{ width: "100%", height: 240 }}>
+        <ResponsiveContainer>
+          <LineChart data={data} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+            <YAxis
+              tickFormatter={(v) => `${sym}${market.currency === "INR" ? formatINR(v) : formatUSD(v)}`}
+              tick={{ fontSize: 11 }}
+              width={90}
+            />
+            <Tooltip
+              formatter={(v) => `${sym}${market.currency === "INR" ? formatINR(v) : formatUSD(v)}`}
+            />
+            <Legend />
+            <Line type="monotone" dataKey="nav" name="Portfolio NAV" stroke="#0ea5e9" strokeWidth={2} dot={false} />
+            <Line type="monotone" dataKey="benchmark_rebased" name="Benchmark (rebased)" stroke="#64748b" strokeWidth={1} strokeDasharray="4 4" dot={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </section>
+  );
+}
+
+function PositionsTable({ market }) {
+  if (!market) return null;
+  const sym = market.currency_symbol;
+  const positions = market.open_positions || [];
+  return (
+    <section className="bg-white rounded-xl shadow-sm p-5 border border-slate-200">
+      <h3 className="text-md font-medium mb-3">{market.label} · Open positions ({positions.length})</h3>
+      {positions.length === 0 ? (
+        <p className="text-sm text-slate-500">No open positions.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-slate-500 border-b border-slate-200">
+                <th className="py-2 pr-3 font-medium">Ticker</th>
+                <th className="py-2 pr-3 font-medium">Sector</th>
+                <th className="py-2 pr-3 font-medium text-right">Sh</th>
+                <th className="py-2 pr-3 font-medium text-right">Entry</th>
+                <th className="py-2 pr-3 font-medium text-right">Now</th>
+                <th className="py-2 pr-3 font-medium text-right">Unreal {sym}</th>
+                <th className="py-2 pr-3 font-medium text-right">Unreal %</th>
+                <th className="py-2 pr-3 font-medium text-right">Stop</th>
+                <th className="py-2 pr-3 font-medium text-right">T1</th>
+                <th className="py-2 pr-3 font-medium">Conv</th>
+              </tr>
+            </thead>
+            <tbody>
+              {positions.map((p) => (
+                <tr key={p.ticker} className="border-b border-slate-100">
+                  <td className="py-2 pr-3 font-medium">{p.ticker}</td>
+                  <td className="py-2 pr-3 text-slate-600">{p.sector || "—"}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{p.shares}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{sym}{formatMoney(p.entry, market.currency)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{sym}{formatMoney(p.current, market.currency)}</td>
+                  <td className={`py-2 pr-3 text-right tabular-nums ${colorFor(p.unrealized_pnl)}`}>
+                    {sym}{formatMoney(p.unrealized_pnl, market.currency)}
+                  </td>
+                  <td className={`py-2 pr-3 text-right tabular-nums ${colorFor(p.unrealized_pct)}`}>
+                    {formatPct(p.unrealized_pct)}
+                  </td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{sym}{formatMoney(p.stop, market.currency)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{sym}{formatMoney(p.target1, market.currency)}</td>
+                  <td className="py-2 pr-3">
+                    <span className={
+                      "inline-block px-1.5 py-0.5 rounded text-xs font-medium " +
+                      (p.conviction === "HIGH" ? "bg-emerald-100 text-emerald-700"
+                       : p.conviction === "MEDIUM" ? "bg-amber-100 text-amber-700"
+                       : "bg-slate-100 text-slate-600")
+                    }>
+                      {p.conviction || "—"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function RecommendationsFeed({ items }) {
+  const list = items || [];
+  return (
+    <section className="bg-white rounded-xl shadow-sm p-5 border border-slate-200">
+      <h3 className="text-md font-medium mb-3">Recent recommendations</h3>
+      {list.length === 0 ? (
+        <p className="text-sm text-slate-500">No recommendations yet.</p>
+      ) : (
+        <ul className="divide-y divide-slate-100">
+          {list.map((r, i) => (
+            <li key={i} className="py-2 flex items-start gap-3">
+              <span className={
+                "shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded mt-0.5 " +
+                (r.market === "US" ? "bg-sky-100 text-sky-700" : "bg-orange-100 text-orange-700")
+              }>
+                {r.market}
+              </span>
+              <div className="grow">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="font-medium">{r.ticker}</span>
+                  <span className="text-xs text-slate-400">{r.timestamp}</span>
+                </div>
+                <div className="text-sm">
+                  <span className={
+                    "font-medium " +
+                    (r.verdict === "BULLISH" ? "text-emerald-600"
+                     : r.verdict === "BEARISH" ? "text-rose-600"
+                     : "text-slate-700")
+                  }>
+                    {r.verdict}
+                  </span>
+                  <span className="text-slate-500"> · {r.action} · {r.conviction}</span>
+                </div>
+                {r.reasoning_one_line && (
+                  <div className="text-xs text-slate-500 mt-0.5">{r.reasoning_one_line}</div>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function Placeholder() {
+  return (
+    <div className="bg-white rounded-xl shadow-sm p-8 border border-slate-200 text-center">
+      <h2 className="text-lg font-medium">No data yet</h2>
+      <p className="text-sm text-slate-500 mt-2">
+        Waiting for the first market close. The scheduler will refresh
+        <code className="bg-slate-100 px-1 mx-1 rounded text-xs">Dashboard/dashboard_data.js</code>
+        after the next <code className="bg-slate-100 px-1 rounded text-xs">IN_CLOSE</code>
+        or <code className="bg-slate-100 px-1 rounded text-xs">US_CLOSE</code> session.
+      </p>
+      <p className="text-xs text-slate-400 mt-4">
+        To trigger one manually:
+        <code className="block mt-1 bg-slate-50 p-2 rounded">
+          python3 Scripts/scheduler.py --force IN_CLOSE
+        </code>
+      </p>
+    </div>
+  );
+}
+
+function App() {
+  const data = window.DATA;
+  const hasData = data && data.markets && (data.markets.US || data.markets.IN);
+
+  if (!hasData) {
+    return (
+      <>
+        <Header data={data || { strategy_start: "—", strategy_end: "—", updated_at: "—" }} />
+        <Placeholder />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Header data={data} />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <MarketCard market={data.markets.US} />
+        <MarketCard market={data.markets.IN} />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <NavChart market={data.markets.US} />
+        <NavChart market={data.markets.IN} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 mb-4">
+        <PositionsTable market={data.markets.US} />
+        <PositionsTable market={data.markets.IN} />
+      </div>
+
+      <div className="mb-4">
+        <RecommendationsFeed items={data.recent_recommendations} />
+      </div>
+
+      <footer className="text-center text-xs text-slate-400 mt-8">
+        Mr.B paper-trade dashboard · refresh page after each market close to see updated data
+      </footer>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+
+</body>
+</html>

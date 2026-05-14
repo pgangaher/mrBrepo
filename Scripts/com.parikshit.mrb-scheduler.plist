@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Mr.B scheduler launchd bootstrap.
+
+  Install:
+      cp Scripts/com.parikshit.mrb-scheduler.plist ~/Library/LaunchAgents/
+      launchctl load ~/Library/LaunchAgents/com.parikshit.mrb-scheduler.plist
+
+  Inspect:
+      launchctl list | grep mrb-scheduler
+      tail -f /Users/parikshitgangaher/Codes/workspace-broker/Logs/scheduler.log
+
+  Stop:
+      launchctl unload ~/Library/LaunchAgents/com.parikshit.mrb-scheduler.plist
+
+  Notes:
+  - KeepAlive=true makes launchd respawn the supervisor if it crashes or exits.
+  - RunAtLoad=true starts the supervisor as soon as the plist is loaded (and
+    on every subsequent login).
+  - PATH is set explicitly because launchd does NOT inherit your shell PATH;
+    the supervisor needs to find `claude` and `python3` from a known location.
+  - StandardOutPath / StandardErrorPath capture anything the supervisor prints
+    outside its own log (e.g. Python tracebacks during startup).
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.parikshit.mrb-scheduler</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>/Users/parikshitgangaher/Codes/workspace-broker/Scripts/scheduler.py</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/parikshitgangaher/Codes/workspace-broker</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/parikshitgangaher/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>TZ</key>
+        <string>Asia/Kolkata</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/parikshitgangaher/Codes/workspace-broker/Logs/scheduler.stdout.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/parikshitgangaher/Codes/workspace-broker/Logs/scheduler.stderr.log</string>
+
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+</dict>
+</plist>

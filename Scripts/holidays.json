@@ -1,0 +1,36 @@
+{
+  "_comment": "2026 trading holidays for NSE and NASDAQ. Dates are sourced from each exchange's published calendar; verify against the official calendar before running live. Format: YYYY-MM-DD. NASDAQ_EARLY_CLOSE lists dates with a 13:00 ET close (the scheduler shifts US_CLOSE accordingly).",
+  "NSE": [
+    "2026-01-26",
+    "2026-02-17",
+    "2026-03-03",
+    "2026-03-31",
+    "2026-04-03",
+    "2026-04-14",
+    "2026-04-21",
+    "2026-05-01",
+    "2026-09-25",
+    "2026-10-02",
+    "2026-10-20",
+    "2026-11-04",
+    "2026-11-25",
+    "2026-12-25"
+  ],
+  "NASDAQ": [
+    "2026-01-01",
+    "2026-01-19",
+    "2026-02-16",
+    "2026-04-03",
+    "2026-05-25",
+    "2026-06-19",
+    "2026-07-03",
+    "2026-09-07",
+    "2026-11-26",
+    "2026-12-25"
+  ],
+  "NASDAQ_EARLY_CLOSE": [
+    "2026-07-02",
+    "2026-11-27",
+    "2026-12-24"
+  ]
+}

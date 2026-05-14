@@ -1,0 +1,19 @@
+{
+  "mode": "paper_trade",
+  "strategy_start": "2026-05-14",
+  "strategy_end": "2026-06-13",
+  "duration_days": 30,
+  "markets": {
+    "US": {
+      "starting_nav": 10000,
+      "currency": "USD",
+      "currency_symbol": "$"
+    },
+    "IN": {
+      "starting_nav": 1000000,
+      "currency": "INR",
+      "currency_symbol": "\u20b9"
+    }
+  },
+  "notes": "Hard-cap paper trade. No top-ups. Locked at first scheduler launch."
+}
