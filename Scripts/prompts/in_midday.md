@@ -8,6 +8,7 @@ Permissions: same as IN_OPEN (append to logs / Recommendations / TradeLog; creat
 
 1. Read the most recent IN portfolio state and today's Recommendations log.
 2. Read this morning's `Sentiment/logs/watchlist_pulse_IN_<today>.md` for context.
+3. **Read the prefetch snapshot** for this session: `Scripts/cache/snapshot_IN_<today>_<HHMM>.json`. Use `quote.last_price` for any mid-session decision. Fall back to web search per `_preamble.md` only if the snapshot is missing or `MRB_PREFETCH_FAILED=1` is set.
 
 ## Routine
 
@@ -16,7 +17,7 @@ Permissions: same as IN_OPEN (append to logs / Recommendations / TradeLog; creat
    - Run a thesis re-review reading the existing research report.
    - Run `RiskManager STOP LOSS REVIEW [TICKER.NS]` — if the recommendation is to tighten the stop, execute a paper `UPDATE STOP` in PortfolioTracker and log the verdict in `Logs/Recommendations_<today>.md`.
 3. **`RiskManager STOP LOSS REVIEW`** for every open IN position regardless of sentiment level (routine trail check). Save the bundle to `Risk/rules/stop_review_IN_<today>.md`.
-4. **No new openings** in this session unless a HIGH-confidence opportunity from the morning Watchlist Score has reached its entry trigger zone — and only if RiskManager re-validates with current price.
+4. **No new openings** in this session unless a HIGH-confidence opportunity from the morning Watchlist Score has reached its entry trigger zone (compare snapshot `quote.last_price` to the morning's trigger) — and only if RiskManager re-validates with current price.
 5. Append every verdict to `Logs/Recommendations_<today>.md`.
 
 ## Wrap-up

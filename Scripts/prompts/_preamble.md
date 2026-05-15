@@ -21,11 +21,33 @@ You are running unattended under a scheduled session. The scheduler is acting as
 
 This run is a 1-month paper-trade. The starting NAV, end date, and currency for each sub-portfolio are locked in `Scripts/strategy_meta.json` — read it once at session start. Fills use the price quoted at session time:
 
-- `*_OPEN` sessions: session-open price.
-- `*_MIDDAY` sessions: last print at session time.
-- `*_CLOSE` sessions: official close.
+- `*_OPEN` sessions: session-open price (`quote.open` from snapshot).
+- `*_MIDDAY` sessions: last print (`quote.last_price` from snapshot).
+- `*_CLOSE` sessions: official close (`quote.close` from snapshot, which is yfinance EOD).
 
-Fetch fill prices via web search (Yahoo Finance for US, NSE site / Moneycontrol for India). Record the price and source in the `TradeLog.md` entry.
+## Authoritative price + signal source: prefetch snapshot
+
+Before every session fires, the scheduler runs `Scripts/prefetch.py <SESSION_ID>` to pull market data via yfinance, compute deterministic technical indicators (RSI, MACD, ATR, returns, relative strength, volume ratio, SMA-200, 20-day high), and score signals using the locked rubric in `Signals/SignalEngine.md` (Amendments section). The result lands at:
+
+```
+Scripts/cache/snapshot_{MARKET}_{YYYY-MM-DD}_{HHMM}.json
+```
+
+**Use this file as the authoritative source** for prices, indicators, composite scores, signal classes, conviction tiers, and ATR-based stop suggestions. Do NOT web-search Yahoo Finance / NSE / Moneycontrol for prices when the snapshot is present — the snapshot is what makes scoring reproducible across sessions. Record the snapshot filename in every `TradeLog.md` entry as the price source.
+
+Snapshot schema (per-ticker, under `tickers[]`):
+
+- `quote`: `{ open, high, low, close, last_price, volume, as_of, source }`
+- `indicators`: `{ rsi_14, macd_line, macd_signal, macd_hist, atr_14, return_1m, return_3m, return_6m, high_20d, sma_200, volume_ratio_20d, bb_upper, bb_lower, benchmark_return_3m }`
+- `subscores`: each component in 0..100 (or null if missing)
+- `composite_score`: 0..100
+- `signal_class`: one of `MOMENTUM_LONG | EARNINGS_PLAY | BREAKOUT | MEAN_REVERSION | SECTOR_ROTATION | NO_SIGNAL`
+- `conviction`: `HIGH` (≥70) / `MEDIUM` (40..69) / `LOW` (<40)
+- `stop_atr`: ATR-based stop price (entry − 1.5×ATR, floored at entry × 0.92)
+
+`data_errors[]` lists any tickers that failed to fetch — treat those as "no data; do not trade today."
+
+**Fallback**: if the env var `MRB_PREFETCH_FAILED=1` is set (the scheduler exports it when prefetch failed) or the snapshot file is missing, fall back to web search for prices, flag the data outage at the top of the session summary, and do not generate any new signal scores — only execute previously approved actions and routine stop reviews.
 
 ## Output discipline
 

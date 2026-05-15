@@ -9,7 +9,8 @@ Permissions: create new dated files in any sub-agent's artifact folder; append t
 1. Read `Scripts/strategy_meta.json` to confirm the locked INR starting NAV (₹10,00,000) and strategy end date. If today is past `strategy_end`, do not open new positions; only run a maintenance pass (stop reviews, P&L update).
 2. Read the most recent `Portfolio/state/IN/portfolio_state_*.md` if any exists.
 3. Read today's `Logs/Recommendations_<today>.md` if it exists (to know what's already been said today).
-4. Confirm NSE is open today (the scheduler already checked the holiday calendar; sanity-check via the NSE website if web search is available).
+4. Confirm NSE is open today (the scheduler already checked the holiday calendar).
+5. **Read the prefetch snapshot** for this session: `Scripts/cache/snapshot_IN_<today>_<HHMM>.json` (newest matching file). This is the authoritative source for prices, indicators, and signal scores. If the file is missing or `MRB_PREFETCH_FAILED=1` is set, fall back per `_preamble.md`.
 
 ## Routine
 
@@ -17,14 +18,14 @@ Walk the five-layer flow for the IN sub-portfolio:
 
 1. **StrategyAdvisor — `MACRO REGIME CHECK IN`**: classify the India regime using India VIX, NIFTY 50 trend, USD/INR, India 10Y G-Sec, FII/DII flows, RBI stance. Save a strategy memo (single-market IN block) to `Strategy/frameworks/strategy_memo_<today>.md` (or `..._<today>-v2.md` if one already exists from a US session today).
 2. **SentimentMonitor — `WATCHLIST PULSE IN`**: lightweight sentiment sweep across the IN watchlist (and all open IN positions). Save to `Sentiment/logs/watchlist_pulse_IN_<today>.md`. Escalate any URGENT items immediately to step 5.
-3. **SignalEngine — `WATCHLIST SCORE IN`**: combined signal score across the IN watchlist. Save to `Signals/outputs/watchlist_score_IN_<today>.md`. Rank candidates by composite score.
-4. **Candidate evaluation**: for each HIGH-confidence (score ≥ 70) and qualifying MEDIUM candidate (40–69 with a clear catalyst), run the full five-layer gate:
+3. **SignalEngine — `WATCHLIST SCORE IN`**: the snapshot already contains a deterministic composite score, signal class, and conviction tier for every IN watchlist + open-position ticker. Compile a `Signals/outputs/watchlist_score_IN_<today>.md` summary that tabulates `composite_score`, `signal_class`, and `conviction` from the snapshot (do NOT recompute or override these numbers — they are the locked formula's output). Rank candidates by composite score. Cite the snapshot filename.
+4. **Candidate evaluation**: for each HIGH-confidence (snapshot `conviction == "HIGH"`, score ≥ 70) and qualifying MEDIUM candidate (40–69 with a clear catalyst), run the full five-layer gate:
    - `ResearchAnalyst RESEARCH [TICKER.NS]` — full report saved to `Research/reports/<TICKER.NS>_<today>.md` if not already present this week.
-   - `SignalEngine` single-stock signal report saved to `Signals/outputs/<TICKER.NS>_signal_<today>.md`.
+   - `SignalEngine` single-stock signal report saved to `Signals/outputs/<TICKER.NS>_signal_<today>.md` — quote the snapshot's `composite_score`, `subscores`, `indicators`, and `signal_class` verbatim; add your interpretation but do not change the numbers.
    - StrategyAdvisor sector alignment check from step 1's memo.
    - `SentimentMonitor SENTIMENT SCAN [TICKER.NS]` if not covered by the pulse.
-   - `RiskManager VALIDATE TRADE` — saved to `Risk/rules/clearance_<TICKER.NS>_<today>.md`. Position size is computed against the INR sub-portfolio NAV.
-5. **Execute paper fills** for every APPROVED or APPROVED-WITH-MODIFICATION verdict from step 4. Use the NSE open price (fetched via web search). Record in `Logs/TradeLog.md` as a new entry with the price source.
+   - `RiskManager VALIDATE TRADE` — saved to `Risk/rules/clearance_<TICKER.NS>_<today>.md`. Position size is computed against the INR sub-portfolio NAV; the suggested stop is the snapshot's `stop_atr` (override only with a documented reason in the clearance file).
+5. **Execute paper fills** for every APPROVED or APPROVED-WITH-MODIFICATION verdict from step 4. Use the snapshot's `quote.open` (NSE open price) for the fill. Record in `Logs/TradeLog.md` as a new entry with the snapshot filename as the price source.
 6. **Stops & sentiment overrides**: for any URGENT alert on an open position from step 2, run a thesis review and trigger a stop adjustment via `RiskManager STOP LOSS REVIEW`.
 7. **Capture verdicts**: append a Recommendation block to `Logs/Recommendations_<today>.md` for every candidate evaluated in step 4 — including those that produced NO-TRADE or REJECTED-by-Risk verdicts. Use the template from `MrB.md`.
 8. **Update PortfolioTracker** with any opens via `PAPER FILL` task (records the price source).

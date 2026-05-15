@@ -1,0 +1,75 @@
+# Mr.B US watchlist (candidate universe).
+# ~50 S&P 500 large caps spread across all 11 GICS sectors.
+# Edit freely between sessions — append or remove as Mr.B's needs evolve.
+
+# Information Technology
+NVDA.US
+AAPL.US
+MSFT.US
+AMD.US
+AVGO.US
+ORCL.US
+CRM.US
+ADBE.US
+ACN.US
+CSCO.US
+
+# Communication Services
+GOOGL.US
+META.US
+NFLX.US
+DIS.US
+TMUS.US
+
+# Consumer Discretionary
+AMZN.US
+TSLA.US
+HD.US
+NKE.US
+MCD.US
+SBUX.US
+
+# Consumer Staples
+COST.US
+WMT.US
+PG.US
+KO.US
+PEP.US
+
+# Health Care
+UNH.US
+LLY.US
+JNJ.US
+ABBV.US
+PFE.US
+MRK.US
+
+# Financials
+JPM.US
+BAC.US
+V.US
+MA.US
+GS.US
+MS.US
+
+# Industrials
+CAT.US
+BA.US
+GE.US
+HON.US
+UPS.US
+
+# Energy
+XOM.US
+CVX.US
+
+# Materials
+LIN.US
+FCX.US
+
+# Real Estate
+PLD.US
+AMT.US
+
+# Utilities
+NEE.US

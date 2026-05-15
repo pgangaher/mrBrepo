@@ -11,10 +11,11 @@ Note: this session typically fires after midnight IST. The session's "today" is 
 1. Read `Scripts/strategy_meta.json`.
 2. Read the most recent US portfolio state.
 3. Read today's Recommendations log (which covers IN sessions from earlier in the same IST date) — if you write new entries here, they remain under that same Recommendations file unless a new IST date has rolled over (in which case start a new file for the new date).
+4. **Read the prefetch snapshot**: `Scripts/cache/snapshot_US_<today>_<HHMM>.json`. The `quote.close` field is the authoritative NASDAQ close (yfinance EOD bar). Fall back per `_preamble.md` if missing or `MRB_PREFETCH_FAILED=1`.
 
 ## Routine
 
-1. **Fetch NASDAQ close prices** via web search (Yahoo Finance) for every open US position.
+1. **Use snapshot `quote.close` prices** for every open US position — do not web-search Yahoo Finance separately when the snapshot is present.
 2. **`PortfolioTracker PORTFOLIO SNAPSHOT <us_trading_date> US [prices: ...]`** — write `Portfolio/state/US/portfolio_state_<us_trading_date>.md` with USD NAV, peak NAV, drawdown, GICS sector exposure, open positions, realized P&L log.
 3. **`PortfolioTracker BENCHMARK UPDATE US [SPY close] <us_trading_date>`** — capture SPY for alpha.
 4. **`RiskManager PORTFOLIO RISK CHECK US`** and **`DRAWDOWN CHECK US`**. If US drawdown ≥ 15%, write `DEFENSIVE MODE ACTIVE US` to the active Recommendations log and stop new US long verdicts.

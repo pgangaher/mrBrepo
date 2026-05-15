@@ -8,6 +8,7 @@ Permissions: append/create as needed; never delete; never overwrite (the dashboa
 
 1. Read the most recent US portfolio state and today's Recommendations log.
 2. Read this evening's `Sentiment/logs/watchlist_pulse_US_<today>.md` for context.
+3. **Read the prefetch snapshot**: `Scripts/cache/snapshot_US_<today>_<HHMM>.json`. Use `quote.last_price` for any mid-session decision. Fall back per `_preamble.md` if missing.
 
 ## Routine
 
@@ -17,7 +18,7 @@ Permissions: append/create as needed; never delete; never overwrite (the dashboa
    - `RiskManager STOP LOSS REVIEW [TICKER.US]` — execute a paper `UPDATE STOP` if tightened.
    - Append the verdict to `Logs/Recommendations_<today>.md`.
 3. **`RiskManager STOP LOSS REVIEW`** for every open US position (routine trail check). Save to `Risk/rules/stop_review_US_<today>.md`.
-4. **No new openings** unless a HIGH-confidence morning candidate has reached its trigger price and RiskManager re-validates.
+4. **No new openings** unless a HIGH-confidence morning candidate has reached its trigger price (compare snapshot `quote.last_price` to the morning's trigger) and RiskManager re-validates.
 5. Append every verdict to `Logs/Recommendations_<today>.md`.
 
 ## Wrap-up

@@ -1,0 +1,83 @@
+# Mr.B IN watchlist (candidate universe).
+# ~50 NIFTY 100 names spread across NIFTY sectoral indices.
+# Edit freely between sessions — append or remove as Mr.B's needs evolve.
+
+# IT
+TCS.NS
+INFY.NS
+HCLTECH.NS
+WIPRO.NS
+TECHM.NS
+
+# Banks
+HDFCBANK.NS
+ICICIBANK.NS
+KOTAKBANK.NS
+AXISBANK.NS
+SBIN.NS
+INDUSINDBK.NS
+
+# Auto
+MARUTI.NS
+M&M.NS
+HEROMOTOCO.NS
+BAJAJ-AUTO.NS
+EICHERMOT.NS
+
+# Pharma
+SUNPHARMA.NS
+DRREDDY.NS
+CIPLA.NS
+DIVISLAB.NS
+
+# FMCG / Consumer Staples
+HINDUNILVR.NS
+ITC.NS
+NESTLEIND.NS
+BRITANNIA.NS
+DABUR.NS
+
+# Metal
+TATASTEEL.NS
+JSWSTEEL.NS
+HINDALCO.NS
+
+# Energy
+RELIANCE.NS
+ONGC.NS
+NTPC.NS
+
+# Financial Services
+BAJFINANCE.NS
+BAJAJFINSV.NS
+HDFCLIFE.NS
+SBILIFE.NS
+
+# Materials / Cement / Paints
+ULTRACEMCO.NS
+GRASIM.NS
+ASIANPAINT.NS
+
+# Telecom
+BHARTIARTL.NS
+
+# Consumer Discretionary
+TITAN.NS
+TRENT.NS
+
+# Industrials
+LT.NS
+BEL.NS
+ABB.NS
+
+# Real Estate
+DLF.NS
+
+# Utilities
+POWERGRID.NS
+
+# Conglomerates / Other
+ADANIENT.NS
+ADANIPORTS.NS
+COALINDIA.NS
+LICI.NS

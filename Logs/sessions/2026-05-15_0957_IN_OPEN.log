@@ -1,0 +1,4 @@
+# session=IN_OPEN fired_at=2026-05-15T09:57:29.770883+05:30
+# prefetch=ok
+
+error: unknown option '--cwd'

@@ -177,6 +177,39 @@ def session_log_path(session_id: str, when: datetime) -> Path:
     return SESSIONS_DIR / f"{when.astimezone(IST).strftime('%Y-%m-%d_%H%M')}_{session_id}.log"
 
 
+def run_prefetch(session_id: str) -> bool:
+    """Run Scripts/prefetch.py to populate Scripts/cache/ before the Claude session.
+    Returns True on success, False on any failure (Claude session still fires either way).
+    """
+    prefetch_path = SCRIPTS_DIR / "prefetch.py"
+    if not prefetch_path.exists():
+        log_line(f"PREFETCH_SKIPPED {session_id} | prefetch.py not found")
+        return False
+    # Prefer venv python if present, fall back to system python3.
+    venv_py = WORKSPACE / ".venv" / "bin" / "python3"
+    py = str(venv_py) if venv_py.exists() else sys.executable or "python3"
+    try:
+        proc = subprocess.run(
+            [py, str(prefetch_path), session_id],
+            cwd=str(WORKSPACE),
+            timeout=10 * 60,  # 10 min cap
+            capture_output=True,
+            text=True,
+        )
+        if proc.returncode == 0:
+            snaps = [l for l in proc.stdout.splitlines() if l.strip()]
+            log_line(f"PREFETCH_OK {session_id} | snapshots={','.join(snaps) if snaps else '(none)'}")
+            return True
+        log_line(f"PREFETCH_FAIL {session_id} | exit={proc.returncode} | stderr={proc.stderr.strip()[:500]}")
+        return False
+    except subprocess.TimeoutExpired:
+        log_line(f"PREFETCH_TIMEOUT {session_id} after 10min")
+        return False
+    except Exception as e:
+        log_line(f"PREFETCH_ERROR {session_id} | {type(e).__name__}: {e}")
+        return False
+
+
 def invoke_claude(session_id: str, dry_run: bool = False) -> int:
     pp = prompt_path(session_id)
     if not pp.exists():
@@ -184,17 +217,24 @@ def invoke_claude(session_id: str, dry_run: bool = False) -> int:
         return 2
     when = datetime.now(UTC)
     log_path = session_log_path(session_id, when)
-    log_line(f"FIRE {session_id} | prompt={pp.name} | log={log_path.name}")
+
+    # Run prefetch first. Graceful degradation: if prefetch fails, fire Claude
+    # anyway but set MRB_PREFETCH_FAILED=1 so the session prompt knows to fall
+    # back to web search and flag the outage at the top of its summary.
+    prefetch_ok = run_prefetch(session_id) if not dry_run else True
+
+    log_line(f"FIRE {session_id} | prompt={pp.name} | log={log_path.name} | prefetch={'ok' if prefetch_ok else 'FAILED'}")
     if dry_run:
         return 0
     prompt_text = pp.read_text()
-    # claude -p runs non-interactively (print mode). The exact CLI flags may
-    # depend on installed version; we keep this minimal and pass the prompt on
-    # stdin to avoid argv-length issues with long prompts.
-    cmd = ["claude", "-p", "--cwd", str(WORKSPACE)]
+    cmd = ["claude", "-p"]
+    env = os.environ.copy()
+    if not prefetch_ok:
+        env["MRB_PREFETCH_FAILED"] = "1"
     try:
         with log_path.open("w") as logf:
-            logf.write(f"# session={session_id} fired_at={when.astimezone(IST).isoformat()}\n\n")
+            logf.write(f"# session={session_id} fired_at={when.astimezone(IST).isoformat()}\n")
+            logf.write(f"# prefetch={'ok' if prefetch_ok else 'FAILED'}\n\n")
             logf.flush()
             proc = subprocess.run(
                 cmd,
@@ -202,7 +242,9 @@ def invoke_claude(session_id: str, dry_run: bool = False) -> int:
                 stdout=logf,
                 stderr=subprocess.STDOUT,
                 cwd=str(WORKSPACE),
+                env=env,
                 timeout=60 * 60,  # 1h max per session
+                text=True,
             )
         log_line(f"DONE {session_id} | exit={proc.returncode}")
         return proc.returncode

@@ -30,7 +30,7 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/bin/python3</string>
+        <string>/Users/parikshitgangaher/Codes/workspace-broker/.venv/bin/python3</string>
         <string>/Users/parikshitgangaher/Codes/workspace-broker/Scripts/scheduler.py</string>
     </array>
 
@@ -46,7 +46,7 @@
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>/Users/parikshitgangaher/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <string>/Users/parikshitgangaher/Codes/workspace-broker/.venv/bin:/Users/parikshitgangaher/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
         <key>TZ</key>
         <string>Asia/Kolkata</string>
     </dict>

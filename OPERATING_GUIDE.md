@@ -54,6 +54,8 @@ The dashboard shows "No data yet" until the first market close fires. Your first
 
 Mr.B is a file-based broker agent. It runs on top of Claude Code (`claude -p`) and stores everything it knows and does inside `/Users/parikshitgangaher/Codes/workspace-broker/`. There is no database, no broker API, no real money — it is a paper account whose state lives entirely in markdown and JSON files.
 
+Before each session fires, the scheduler runs a Python prefetch step (`Scripts/prefetch.py`) that pulls market data via yfinance, computes deterministic technical indicators, and scores signals using the locked rubric in `Signals/SignalEngine.md`. The result lands in `Scripts/cache/snapshot_{MARKET}_{DATE}_{HHMM}.json`. The Claude session reads that snapshot as its authoritative source for prices, indicators, and signal scores — it does NOT web-search Yahoo Finance / NSE for prices when the snapshot is present. This makes signal scoring reproducible across sessions and removes the fragility of LLM-parsed web pages.
+
 Two markets, kept structurally separate at every layer:
 
 | Market | Exchanges | Currency | Benchmark | Vol gauge |
@@ -134,7 +136,9 @@ The 3-month framework lives in `Strategy/ThreeMonthFramework.md`. The original 1
 
 ## 5. The scheduler and the 8 sessions
 
-`Scripts/scheduler.py` is a single long-running Python process. It computes the next firing time (timezone-aware, DST-aware, holiday-aware) and runs `claude -p` with the right session prompt at the right moment.
+`Scripts/scheduler.py` is a single long-running Python process. It computes the next firing time (timezone-aware, DST-aware, holiday-aware), runs `Scripts/prefetch.py` to populate `Scripts/cache/` with market data + signal scores, then runs `claude -p` with the right session prompt at the right moment.
+
+The prefetch step is graceful: if it fails (network outage, yfinance rate-limit, etc.), the scheduler still fires the Claude session but exports `MRB_PREFETCH_FAILED=1` so the prompt falls back to web search and flags the data outage at the top of the session summary. `Logs/scheduler.log` shows `PREFETCH_OK` or `PREFETCH_FAIL` before each `FIRE` line.
 
 ### The schedule (all times IST)
 
@@ -292,6 +296,18 @@ workspace-broker/
 │
 ├── Scripts/
 │   ├── scheduler.py                    # Long-running supervisor
+│   ├── prefetch.py                     # Pre-session data + signals pull (writes cache/)
+│   ├── data_feed.py                    # yfinance wrapper (US + IN tickers)
+│   ├── indicators.py                   # Pure-math technical indicators
+│   ├── signal_engine.py                # Deterministic composite scoring + classification
+│   ├── requirements.txt                # Python deps (yfinance, pandas, numpy)
+│   ├── watchlist_US.txt                # US watchlist (one .US ticker per line)
+│   ├── watchlist_IN.txt                # IN watchlist (one .NS ticker per line)
+│   ├── cache/                          # Created at first prefetch run — never edit by hand
+│   │   ├── snapshot_US_YYYY-MM-DD_HHMM.json   # Per-session authoritative snapshot
+│   │   ├── snapshot_IN_YYYY-MM-DD_HHMM.json
+│   │   ├── signals/<TICKER>_YYYY-MM-DD.json   # Per-ticker detail
+│   │   └── prices/<TICKER>.csv                # Rolling OHLCV cache
 │   ├── prompts/                        # 8 session prompts
 │   │   ├── in_open.md
 │   │   ├── in_midday.md
@@ -451,6 +467,7 @@ The launchd plist sets `PATH` explicitly because launchd does not inherit your s
 
 The `claude -p` invocation may have errored before writing. Check `Logs/scheduler.log` for the exit code, and `Logs/scheduler.stderr.log` for any Python traceback from the supervisor.
 
+
 ### A session fired at the wrong IST time
 
 Likely a US DST flip just happened (around early March and early November). The scheduler converts ET → IST per day, so this should be automatic. If it isn't, verify the host's `/usr/share/zoneinfo/America/New_York` is fresh.
@@ -476,6 +493,17 @@ tail -f /Users/parikshitgangaher/Codes/workspace-broker/Logs/scheduler.log
 ```
 
 You'll see one line per event: next firing time, FIRE events with session ID, DONE events with exit codes.
+
+### Prefetch failed — what now?
+
+The scheduler logs `PREFETCH_FAIL <SESSION_ID> | exit=... | stderr=...` to `Logs/scheduler.log` and still fires the Claude session with `MRB_PREFETCH_FAILED=1` in the environment. The session prompt then falls back to web search and flags the outage at the top of its summary.
+
+Common causes:
+
+- **yfinance rate-limit (HTTP 429)** — usually clears in 10–15 min. Force-re-run: `python3 Scripts/prefetch.py IN_OPEN` (or whichever session).
+- **Network outage** — check connectivity, then re-run prefetch manually.
+- **Watchlist has a bad ticker** — `Scripts/cache/snapshot_*.json` will list it under `data_errors`. Fix `Scripts/watchlist_{US,IN}.txt` and re-run.
+- **Venv not installed** — `python3 -m venv .venv && source .venv/bin/activate && pip install -r Scripts/requirements.txt`.
 
 ### How do I see what Mr.B actually said in a session?
 

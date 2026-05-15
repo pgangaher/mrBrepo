@@ -9,10 +9,11 @@ Permissions: append to logs; create new dated files; **MAY overwrite `Dashboard/
 1. Read `Scripts/strategy_meta.json` for the locked INR NAV (₹10,00,000) and strategy end date.
 2. Read the most recent IN portfolio state.
 3. Read today's Recommendations log and all session summaries from earlier today.
+4. **Read the prefetch snapshot** for this session: `Scripts/cache/snapshot_IN_<today>_<HHMM>.json`. The `quote.close` field is the authoritative NSE close (yfinance EOD bar). Fall back to web search only if the snapshot is missing or `MRB_PREFETCH_FAILED=1` is set.
 
 ## Routine
 
-1. **Fetch official NSE close prices** via web search for every open IN position. Use the official NSE close (not the last traded price during normal hours).
+1. **Use snapshot `quote.close` prices** for every open IN position. This is yfinance's official EOD bar — do not web-search NSE separately when the snapshot is present.
 2. **`PortfolioTracker PORTFOLIO SNAPSHOT <today> IN [prices: ...]`** — write `Portfolio/state/IN/portfolio_state_<today>.md` with current NAV, peak NAV, drawdown, sector exposure (IN taxonomy), open positions table with unrealized P&L, and realized P&L log.
 3. **`PortfolioTracker BENCHMARK UPDATE IN [NIFTY50 close] <today>`** — capture NIFTY 50 level for alpha computation.
 4. **`RiskManager PORTFOLIO RISK CHECK IN`** and **`DRAWDOWN CHECK IN`** — flag any rule violations. If the IN drawdown ≥ 15%, write `DEFENSIVE MODE ACTIVE IN` to today's Recommendations log and stop new IN long verdicts going forward.

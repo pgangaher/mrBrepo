@@ -160,3 +160,59 @@ Save to `Signals/outputs/watchlist_score_[YYYY-MM-DD].md`.
 - Does not delete, move, or rename any files.
 - Does not access any path outside `/Users/parikshitgangaher/Codes/workspace-broker`.
 - Does not take autonomous action without a task from Mr.B.
+
+---
+
+## Amendments — Locked Quantitative Formula (binding)
+
+> Added when the deterministic Python signal layer landed in `Scripts/{indicators,signal_engine,prefetch}.py`. The prose rubric above describes what each component measures; this amendments section defines exactly how the numbers are computed. When the amendments disagree with the prose, the amendments win — they are the implementation contract.
+
+### Component sub-scores (all normalized to 0..100; null = drop & re-normalize remaining weights)
+
+| Component | Formula |
+|---|---|
+| `momentum_1m` | Cross-sectional percentile rank of 21-day return vs. all watchlist + open-position tickers in this market on this date. |
+| `momentum_3m` | Same, on 63-day return. |
+| `momentum_6m` | Same, on 126-day return. |
+| `rel_strength` | `clip(100 × (ticker_3m_return − benchmark_3m_return + 0.5), 0, 100)`. Benchmark: SPY for `.US`, `^NSEI` (NIFTY 50) for `.NS`. |
+| `volume_confirm` | 100 if `volume_today ≥ 1.5 × MA20(volume)` AND 21-day return > 0; 50 if `≥ 1.0×`; else 0. |
+| `rsi_zone` | Triangular: 100 at RSI=60, 0 at RSI≤30 or RSI≥85, linear ramp between. |
+| `macd_signal` | 100 if `hist > 0` and rising vs prior bar; 50 if `hist > 0` but flat/falling; 0 if `hist ≤ 0`. |
+| `earnings_cat` | 100 if within ±5 trading days of earnings; 0 if ≥ ±20; linear in between. Currently always **null** in the snapshot because yfinance's earnings calendar is unreliable; weights re-normalize. Will be wired in a follow-up when a reliable earnings source is added. |
+
+### Composite score
+
+`composite = Σ(subscore_i × weight_i) / Σ(weight_i for i where subscore_i is not null)`
+
+Weights:
+- `momentum_1m`: 0.15
+- `momentum_3m`: 0.20
+- `momentum_6m`: 0.15
+- `rel_strength`: 0.15
+- `volume_confirm`: 0.10
+- `rsi_zone`: 0.10
+- `macd_signal`: 0.10
+- `earnings_cat`: 0.05
+
+### Conviction tier (matches RiskManager's position-size buckets)
+
+- HIGH: composite ≥ 70
+- MEDIUM: 40 ≤ composite < 70
+- LOW: composite < 40
+
+### Signal class assignment (first matching rule wins)
+
+1. **`EARNINGS_PLAY`** — `earnings_cat ≥ 80` AND `composite ≥ 55`.
+2. **`BREAKOUT`** — `close_today ≥ 20-day high` AND `volume_confirm ≥ 50`.
+3. **`MOMENTUM_LONG`** — `composite ≥ 60` AND `momentum_3m` in top quartile of watchlist AND `momentum_6m` in top quartile of watchlist.
+4. **`MEAN_REVERSION`** — `RSI < 35` AND `composite ≥ 50` AND `close_today > SMA(200)` (trend filter).
+5. **`SECTOR_ROTATION`** — `rel_strength subscore ≥ 70` and not classified above.
+6. **`NO_SIGNAL`** — otherwise.
+
+### ATR-based stop suggestion (for RiskManager handoff)
+
+`stop_atr = max(close_today − 1.5 × ATR(14), close_today × 0.92)` — never deeper than an 8% loss.
+
+### Reproducibility guarantee
+
+Running `python3 Scripts/prefetch.py <SESSION_ID>` twice within the same minute against the same data must produce identical `subscores`, `composite_score`, `signal_class`, and `conviction` for every ticker. Only `generated_at` may differ. If a regression breaks this, treat it as a correctness bug.

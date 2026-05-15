@@ -1,0 +1,32 @@
+Traceback (most recent call last):
+  File "/Users/parikshitgangaher/Codes/workspace-broker/Scripts/scheduler.py", line 308, in <module>
+    sys.exit(main())
+  File "/Users/parikshitgangaher/Codes/workspace-broker/Scripts/scheduler.py", line 303, in main
+    run_forever(dry_run=args.dry_run)
+  File "/Users/parikshitgangaher/Codes/workspace-broker/Scripts/scheduler.py", line 277, in run_forever
+    invoke_claude(nxt.session_id, dry_run=dry_run)
+  File "/Users/parikshitgangaher/Codes/workspace-broker/Scripts/scheduler.py", line 239, in invoke_claude
+    proc = subprocess.run(
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/subprocess.py", line 507, in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/subprocess.py", line 1134, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/subprocess.py", line 1959, in _communicate
+    input_view = memoryview(self._input)
+TypeError: memoryview: a bytes-like object is required, not 'str'
+Traceback (most recent call last):
+  File "/Users/parikshitgangaher/Codes/workspace-broker/Scripts/scheduler.py", line 308, in <module>
+    sys.exit(main())
+  File "/Users/parikshitgangaher/Codes/workspace-broker/Scripts/scheduler.py", line 303, in main
+    run_forever(dry_run=args.dry_run)
+  File "/Users/parikshitgangaher/Codes/workspace-broker/Scripts/scheduler.py", line 277, in run_forever
+    invoke_claude(nxt.session_id, dry_run=dry_run)
+  File "/Users/parikshitgangaher/Codes/workspace-broker/Scripts/scheduler.py", line 239, in invoke_claude
+    proc = subprocess.run(
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/subprocess.py", line 507, in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/subprocess.py", line 1134, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/subprocess.py", line 1959, in _communicate
+    input_view = memoryview(self._input)
+TypeError: memoryview: a bytes-like object is required, not 'str'
