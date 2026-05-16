@@ -20,7 +20,7 @@ WEIGHTS = {
 }
 
 
-def momentum_subscore(return_value, peer_returns):
+def momentum_subscore(return_value: float | None, peer_returns: list[float]) -> float | None:
     """Cross-sectional percentile rank of return vs peers (0..100)."""
     if return_value is None:
         return None
@@ -31,7 +31,7 @@ def momentum_subscore(return_value, peer_returns):
     return 100.0 * rank / len(peers)
 
 
-def rel_strength_subscore(ticker_3m, bench_3m):
+def rel_strength_subscore(ticker_3m: float | None, bench_3m: float | None) -> float | None:
     """100 × (ticker_3m − bench_3m + 0.5) clipped to [0, 100]."""
     if ticker_3m is None or bench_3m is None:
         return None
@@ -39,7 +39,7 @@ def rel_strength_subscore(ticker_3m, bench_3m):
     return float(max(0.0, min(100.0, raw)))
 
 
-def volume_confirm_subscore(vol_ratio, price_change):
+def volume_confirm_subscore(vol_ratio: float | None, price_change: float | None) -> float | None:
     if vol_ratio is None:
         return None
     if vol_ratio >= 1.5 and price_change is not None and price_change > 0:
@@ -49,7 +49,7 @@ def volume_confirm_subscore(vol_ratio, price_change):
     return 0.0
 
 
-def rsi_zone_subscore(rsi_value):
+def rsi_zone_subscore(rsi_value: float | None) -> float | None:
     """Triangular: peaks at RSI=60. 0 at RSI≤30 or RSI≥85, ramping linearly."""
     if rsi_value is None:
         return None
@@ -60,7 +60,7 @@ def rsi_zone_subscore(rsi_value):
     return 100.0 * (85 - rsi_value) / 25.0
 
 
-def macd_signal_subscore(hist_today, hist_prev):
+def macd_signal_subscore(hist_today: float | None, hist_prev: float | None) -> float | None:
     if hist_today is None:
         return None
     if hist_today > 0:
@@ -70,7 +70,7 @@ def macd_signal_subscore(hist_today, hist_prev):
     return 0.0
 
 
-def earnings_subscore(days_to_earnings):
+def earnings_subscore(days_to_earnings: int | None) -> float | None:
     """Peaks at |d|≤5, decays linearly to 0 by |d|≥20."""
     if days_to_earnings is None:
         return None
@@ -82,7 +82,7 @@ def earnings_subscore(days_to_earnings):
     return 100.0 * (20 - d) / 15.0
 
 
-def composite(subscores: dict) -> float:
+def composite(subscores: dict[str, float | None]) -> float:
     total_w = 0.0
     total = 0.0
     for k, w in WEIGHTS.items():
@@ -96,7 +96,7 @@ def composite(subscores: dict) -> float:
     return total / total_w
 
 
-def conviction(score):
+def conviction(score: float) -> str:
     if score >= 70:
         return "HIGH"
     if score >= 40:
@@ -165,7 +165,7 @@ def classify(
     return "NO_SIGNAL"
 
 
-def stop_atr(close_today, atr_value, multiplier: float = 1.5):
+def stop_atr(close_today: float | None, atr_value: float | None, multiplier: float = 1.5) -> float | None:
     """ATR-based stop, floored at 8% loss (entry × 0.92)."""
     if close_today is None or atr_value is None:
         return None

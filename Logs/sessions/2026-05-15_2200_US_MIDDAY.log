@@ -1,0 +1,44 @@
+# session=US_MIDDAY fired_at=2026-05-15T22:00:00.138839+05:30
+# prefetch=ok
+
+US_MIDDAY session complete. Here's the full session report:
+
+---
+
+## Mr.B — US_MIDDAY Session Summary
+**2026-05-15 | 22:00–22:10 IST (12:30 EDT) | Snapshot: `snapshot_US_2026-05-15_220028.json`**
+
+### URGENT Alerts
+**None.** No earnings pre-announcements, FDA actions, SEC filings, CEO departures, or M&A signals across any open US position. Technical proxies (volume, MACD, RSI) show no signature consistent with news-driven moves. Web search was blocked; proxy analysis only.
+
+### ELEVATED Alerts (2)
+
+| Ticker | Event | Detail |
+|---|---|---|
+| **NVDA.US** | Intraday stop breach | Day low **$224.25** < paper stop **$224.98** by $0.73. Recovered to $228.40 by 12:30 EDT. Volume sub-average (0.59×) — no panic selling. No close executed (midday price > stop per paper-trade rules). |
+| **CAT.US** | Near-stop event | Day low **$880.20** — only **$1.83 / 0.21%** above stop **$878.37**. Recovered to $885.44. MACD mildly negative (−1.93). |
+
+### Stops Adjusted
+**None.** All three stops maintained as-is. Widening to current ATR floors would move stops against positions (prohibited). US_CLOSE action flags: if NVDA closes below $224.98 or CAT closes below $878.37, execute paper close.
+
+### Open US Positions at Midday
+
+| Ticker | Shares | Entry | Midday | P&L | Stop | Buffer | Alert |
+|---|---|---|---|---|---|---|---|
+| NVDA.US | 4.24 | $235.74 | $228.40 | −$31.12 / −3.11% | $224.98 | 1.50% | ⚠️ ELEVATED |
+| CAT.US | 0.65 | $919.98 | $885.44 | −$22.45 / −3.75% | $878.37 | 0.80% | ⚠️ ELEVATED |
+| GOOGL.US | 2.01 | $397.28 | $397.16 | −$0.24 / −0.03% | $386.30 | 2.73% | ✓ NEUTRAL |
+| **Total** | | | | **−$53.81 / −0.54% NAV** | | | |
+
+**Estimated US NAV: $9,946.19 | VIX: 18.37 (improving) | Defensive Mode: NOT ACTIVE**
+
+### Artifacts Written (6 files)
+- `Sentiment/logs/sentiment_NVDA.US_2026-05-15.md` — ELEVATED
+- `Sentiment/logs/sentiment_CAT.US_2026-05-15.md` — ELEVATED
+- `Sentiment/logs/sentiment_GOOGL.US_2026-05-15-v2.md` — NEUTRAL
+- `Risk/rules/stop_review_US_2026-05-15.md` — All stops maintained
+- `Logs/Recommendations_2026-05-15.md` — Recs #18–#22 appended
+- `Logs/sessions/2026-05-15_US_MIDDAY.md` — this summary
+
+### Carry-Forward to US_CLOSE
+NVDA and CAT require close-price stop checks. NVDA earnings triple-check due **May 21**. AMD stop_atr worsened to 8.0% today — Phase 2 entry timing. CSCO RSI 88.09 (worsened) — no entry.

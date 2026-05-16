@@ -138,7 +138,15 @@ The 3-month framework lives in `Strategy/ThreeMonthFramework.md`. The original 1
 
 `Scripts/scheduler.py` is a single long-running Python process. It computes the next firing time (timezone-aware, DST-aware, holiday-aware), runs `Scripts/prefetch.py` to populate `Scripts/cache/` with market data + signal scores, then runs `claude -p` with the right session prompt at the right moment.
 
+The scheduler's `WORKSPACE` path is derived from its own file location (`Path(__file__).resolve().parent.parent`), so it is portable — it does not hardcode your home directory.
+
 The prefetch step is graceful: if it fails (network outage, yfinance rate-limit, etc.), the scheduler still fires the Claude session but exports `MRB_PREFETCH_FAILED=1` so the prompt falls back to web search and flags the data outage at the top of the session summary. `Logs/scheduler.log` shows `PREFETCH_OK` or `PREFETCH_FAIL` before each `FIRE` line.
+
+Each `DONE` log line now includes the session's wall-clock duration, e.g.:
+```
+[2026-05-15 12:38:56 +0530] DONE IN_MIDDAY | exit=0 | elapsed=514s
+```
+This makes it easy to spot hung sessions (unusually long elapsed) vs fast exits (possible errors).
 
 ### The schedule (all times IST)
 
@@ -300,14 +308,18 @@ workspace-broker/
 │   ├── data_feed.py                    # yfinance wrapper (US + IN tickers)
 │   ├── indicators.py                   # Pure-math technical indicators
 │   ├── signal_engine.py                # Deterministic composite scoring + classification
-│   ├── requirements.txt                # Python deps (yfinance, pandas, numpy)
+│   ├── requirements.txt                # Python deps with upper-bound pins (yfinance<0.3, pandas<3, numpy<2)
 │   ├── watchlist_US.txt                # US watchlist (one .US ticker per line)
 │   ├── watchlist_IN.txt                # IN watchlist (one .NS ticker per line)
 │   ├── cache/                          # Created at first prefetch run — never edit by hand
-│   │   ├── snapshot_US_YYYY-MM-DD_HHMM.json   # Per-session authoritative snapshot
-│   │   ├── snapshot_IN_YYYY-MM-DD_HHMM.json
+│   │   ├── snapshot_US_YYYY-MM-DD_HHMMSS.json # Per-session authoritative snapshot (seconds precision)
+│   │   ├── snapshot_IN_YYYY-MM-DD_HHMMSS.json
 │   │   ├── signals/<TICKER>_YYYY-MM-DD.json   # Per-ticker detail
 │   │   └── prices/<TICKER>.csv                # Rolling OHLCV cache
+│   ├── cache_cleanup.py                # Prune cache files older than 30 days (run manually)
+│   ├── tests/                          # pytest unit tests for pure-math modules
+│   │   ├── test_indicators.py          # 17 tests covering rsi, macd, returns, atr, sma, etc.
+│   │   └── test_signal_engine.py       # 23 tests covering composite, conviction, stop_atr, classify, etc.
 │   ├── prompts/                        # 8 session prompts
 │   │   ├── in_open.md
 │   │   ├── in_midday.md
@@ -334,6 +346,22 @@ workspace-broker/
 1. **Never delete any file.** Not snapshots, not drafts, not session logs.
 2. **Never leave** `/Users/parikshitgangaher/Codes/workspace-broker/`. All reads and writes stay inside.
 3. **Never overwrite an existing file** — except `Dashboard/dashboard_data.js`, which is by design a rolling snapshot rebuilt from append-only sources. If a same-date file already exists, Mr.B writes `..._YYYY-MM-DD-v2.md` (then `-v3`, etc.) and notes the supersession.
+
+### Permissions (`.claude/settings.local.json`)
+
+The unattended `claude -p` process only auto-approves tool calls listed in `.claude/settings.local.json`. The required permissions for Mr.B to write output files are:
+
+```json
+"Write(**)",
+"Edit(**)",
+"Bash(mkdir -p *)",
+"Bash(cat *)",
+"Bash(ls *)",
+"Bash(find *)",
+"Bash(grep *)"
+```
+
+If `Write(**)` or `Edit(**)` are absent, every session will complete its analysis but **silently fail to save any files**. The full output will be visible in `Logs/sessions/<date>_<HHMM>_<SESSION_ID>.log` but nothing will appear in the output folders (`Research/`, `Risk/`, `Signals/`, etc.).
 
 ---
 
@@ -463,9 +491,34 @@ The supervisor will recreate it on next start with today's date.
 
 The launchd plist sets `PATH` explicitly because launchd does not inherit your shell `PATH`. Check that `which claude` resolves and that the path is in the plist's `EnvironmentVariables.PATH`. Current plist includes `/Users/parikshitgangaher/.local/bin` which is where `claude` lives on this machine.
 
-### Session fired but log file is empty
+### Session fired but log file is empty (only 2-line header)
 
-The `claude -p` invocation may have errored before writing. Check `Logs/scheduler.log` for the exit code, and `Logs/scheduler.stderr.log` for any Python traceback from the supervisor.
+Two possible causes:
+
+1. **Scheduler was restarted while a session was running.** launchd kills the old process tree when it spawns a new one. This happens if the plist is reloaded (`launchctl kickstart`) while `claude -p` is mid-session. The session log will contain only the header lines written before `subprocess.run` started. Check `Logs/scheduler.log` for multiple `scheduler start` lines within a short window — that confirms a restart killed the session.
+
+2. **Python subprocess error before Claude was invoked.** Check `Logs/scheduler.stderr.log` for a Python traceback and `Logs/scheduler.log` for the exit code on the `DONE` line.
+
+### Session ran fine but output files are missing (Research/, Risk/, Signals/, etc.)
+
+`Write(**)` and `Edit(**)` are missing from `.claude/settings.local.json`. The Claude session completed its full analysis but every file-write attempt was silently blocked.
+
+**Recovery:** Add the permissions (see the Permissions section in §7), then check `Logs/sessions/<date>_<HHMM>_<SESSION_ID>.log` — the complete session output is there. You can recover the content manually or force-re-run the session with `--force <SESSION_ID>`.
+
+**Verify the permissions file looks like:**
+```json
+{
+  "permissions": {
+    "allow": [
+      "Write(**)",
+      "Edit(**)",
+      "Bash(mkdir -p *)",
+      "Bash(cat *)",
+      ...
+    ]
+  }
+}
+```
 
 
 ### A session fired at the wrong IST time
@@ -524,6 +577,26 @@ Two views:
 - **Weekly**: `Logs/Weekly_Reviews/week_NN_<date>.md` — what worked, what didn't, signal-class hit rates, calibration.
 
 The dashboard gives you the bottom line in numbers; the recommendations log gives you the reasoning behind each call.
+
+### The cache directory is growing large
+
+`Scripts/cache/` accumulates snapshot JSON files (one per market per session) and price CSVs indefinitely. At 3 sessions/market/day × 2 markets the snapshots alone add up quickly. Run the cleanup script to prune anything older than 30 days:
+
+```bash
+python3 Scripts/cache_cleanup.py
+```
+
+This is safe to run at any time — it only removes files whose modification time is older than 30 days and will not touch today's snapshots or price history.
+
+### How do I run the unit tests?
+
+The pure-math modules (`indicators.py`, `signal_engine.py`) have a pytest suite:
+
+```bash
+python3 -m pytest Scripts/tests/ -v
+```
+
+40 tests covering RSI, MACD, ATR, Bollinger Bands, returns, volume ratio, SMA, composite scoring, conviction tiers, stop-loss floor, momentum percentile ranks, RSI zone subscore, and signal classification. Run this after any change to those files to catch regressions.
 
 ---
 

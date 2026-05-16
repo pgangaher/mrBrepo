@@ -1,0 +1,36 @@
+# session=IN_CLOSE fired_at=2026-05-15T15:30:00.029130+05:30
+# prefetch=ok
+
+IN_CLOSE session complete. Here is the wrap-up:
+
+---
+
+## IN_CLOSE Session Summary — 2026-05-15
+
+**IN Sub-Portfolio NAV:** ₹9,98,189.50 (vs ₹10,00,000 yesterday)
+**Day P&L:** −₹1,810 (−0.18%) — first trading day for all 3 positions
+
+### Position EOD Snapshot
+
+| Ticker | Entry | Close | P&L | Stop Buffer | T1 Gap |
+|---|---|---|---|---|---|
+| ONGC.NS | ₹301.15 | ₹299.50 | −₹548 | 3.0% above stop | 6.8% to T1 |
+| ADANIPORTS.NS | ₹1,807.90 | ₹1,792.00 | −₹525 | 2.0% above stop | 8.8% to T1 |
+| HINDALCO.NS | ₹1,080.50 | ₹1,067.10 | −₹737 | 1.9% above stop | 8.7% to T1 |
+
+### Risk & Reconciliation
+- **Stops triggered:** NONE — all 3 day-lows were above their respective stops
+- **Targets hit:** NONE — no T1 trims required
+- **Drawdown:** 0.18% — well below the 15% defensive-mode threshold; **IN portfolio fully operational**
+- **India VIX:** 18.80 | **NIFTY 50 3m:** −8.53%
+
+### Files Written
+| File | Status |
+|---|---|
+| `Portfolio/state/IN/portfolio_state_2026-05-15-v2.md` | Created (v2 = EOD; v1 was midday entry-day) |
+| `Logs/daily_pnl_IN.md` | Appended actual EOD line (supersedes midday placeholder) |
+| `Logs/Recommendations_2026-05-15.md` | Appended Day Close Summary block |
+| `Logs/sessions/2026-05-15_IN_CLOSE.md` | Created |
+| `Dashboard/dashboard_data.js` | Refreshed with IN EOD prices; US kept at yesterday's figures (no US_CLOSE yet) |
+
+**Next session:** US_OPEN (~19:00 IST tonight) — confirm NVDA and CAT are on-book at the open.

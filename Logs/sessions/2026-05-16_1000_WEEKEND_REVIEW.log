@@ -1,0 +1,50 @@
+# session=WEEKEND_REVIEW fired_at=2026-05-16T10:00:00.098505+05:30
+# prefetch=ok
+
+All session outputs are complete. Here is the full WEEKEND_REVIEW summary:
+
+---
+
+## WEEKEND_REVIEW — 2026-W20 Complete
+
+**Session fired:** 2026-05-16 10:00 IST | Both markets closed | Phase 1 → Phase 2 transition
+
+### Week P&L
+
+| Market | Start NAV | End NAV | Week P&L | Week % |
+|---|---|---|---|---|
+| US | $10,000 | $9,933.32 | −$66.68 | −0.67% |
+| IN | ₹10,00,000 | ₹9,98,189.50 | −₹1,810.50 | −0.18% |
+
+Cumulative alpha vs benchmark: N/A this week (SPY/NIFTY daily capture not yet in prefetch — action item for W21).
+
+### Top Win / Worst Loss
+
+- **Top win:** GOOGL.US — only −0.21% from entry; cleanest risk-adjusted US position. AVGO.US NO-TRADE also standout (avoided −5.25% gap-down).
+- **Worst loss:** NVDA.US at −4.43% (−$44.27); CRITICAL stop watch — close $225.30 is $0.32 above stop $224.98.
+
+### Stops Trailed
+**None.** All 6 positions entered this week and are in unrealized loss — no gains exist to protect.
+
+### Framework Amendments Appended
+**1 amendment:** IN IT sector (TCS/INFY/HCLTECH/WIPRO/TECHM) formally downgraded to **AVOID** until cohort RSI >50 AND MACD bullish on ≥3 of 5 names. W20 data: all five names NO_SIGNAL LOW, RSIs 26–40, 3m −17% to −28%.
+
+### Artifacts Written
+| File | Action |
+|---|---|
+| `Portfolio/performance/US/weekly_review_2026-W20.md` | Created |
+| `Portfolio/performance/IN/weekly_review_2026-W20.md` | Created |
+| `Strategy/frameworks/strategy_review_2026-W20.md` | Created |
+| `Logs/Recommendations_2026-05-16.md` | Created (stop-trail review) |
+| `Logs/Weekly_Reviews/week_20_2026-05-16.md` | Created |
+| `Strategy/ThreeMonthFramework.md` | Appended (1 row to Amendments Log) |
+| `Dashboard/dashboard_data.js` | Overwritten |
+| `Logs/sessions/2026-05-16_WEEKEND_REVIEW.md` | Created |
+
+### Next-Monday Action List
+1. **NVDA.US CRITICAL**: If open < $224.98 at US_OPEN → paper close immediately
+2. **IN_OPEN**: ADANIENT.NS RSI check; SUNPHARMA.NS five-layer
+3. **US Phase 2**: AMD.US fresh five-layer with Phase 2 stop-width latitude
+4. **CSCO.US**: Entry only on RSI < 75 (was 88.47 Friday)
+5. **May 21**: NVDA earnings triple-check (7 days pre-earnings ~May 28)
+6. **Prefetch fix**: Add SPY and NIFTY 50 spot to daily capture for alpha tracking

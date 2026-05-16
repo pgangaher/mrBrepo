@@ -1,0 +1,44 @@
+# session=US_OPEN fired_at=2026-05-15T19:00:00.034568+05:30
+# prefetch=ok
+
+US_OPEN session complete. Here is the full summary:
+
+---
+
+## Mr.B — US_OPEN Session Complete | 2026-05-15
+
+**Regime:** Risk-On Trending with elevated caution — VIX ticked up to 19.02 at NASDAQ open (from 17.3 at midday). US macro intact; AI/semiconductor + infrastructure capex remain primary themes.
+
+### Watchlist Pulse
+- **NVDA.US** (open): Down 2.62% at open ($229.57 vs $235.74 entry). Stop buffer 2.0% — intact, monitoring.
+- **CAT.US** (open): Down 2.86% at open ($893.64 vs $919.98 entry). Stop buffer 1.71% — intact but thin.
+- **AVGO.US**: ELEVATED alert — gapped down −5.25% to $416.73. Stop invalidated.
+- **CSCO.US**: ELEVATED — RSI 87.47 still extreme, volume 3.44× average.
+- **GOOGL.US**: POSITIVE — cleanest setup in today's universe.
+
+### Top 3 Signal Scores (US_OPEN snapshot)
+| Rank | Ticker | Score | Status |
+|---|---|---|---|
+| 1 | CSCO.US | 86.46 | WATCH — overbought + stop too wide |
+| 2 | AMD.US | 76.12 | REJECTED — stop 5.73% (improving from 7.76%) |
+| 3 | NVDA.US | 74.06 | Already open |
+
+### Paper Fill Executed
+**Trade #6 — GOOGL.US BUY at $397.28** | 2.01 shares | $798.53 | Stop $386.30 (−2.76%) | T1 $419.24 / T2 $441.20 | All five layers APPROVED.
+
+### Rejections
+- **CSCO**: Stop 6.17% exceeds Phase 1 limit + RSI 87.47 extreme
+- **AMD**: Stop 5.73% still above Phase 1 limit (improving — Phase 2 candidate May 21+)
+- **AVGO**: Gap-down invalidated ATR stop; recalculated stop 5.58% fails Phase 1; earnings in 3 wks
+- **SBUX/UNH**: Sector NEUTRAL — deferred to Phase 2
+
+### US Portfolio at Session End
+| Ticker | Entry | Open | Unreal. P&L | Stop Buffer |
+|---|---|---|---|---|
+| NVDA.US | $235.74 | $229.57 | −$26.16 | 2.00% |
+| CAT.US | $919.98 | $893.64 | −$17.12 | 1.71% |
+| GOOGL.US | $397.28 | $397.28 | $0.00 | 2.76% |
+
+**3 positions open | 24% deployed | NAV ~$9,956.72 | Drawdown 0.43% | Defensive mode: NOT ACTIVE**
+
+Dashboard update reserved for US_CLOSE session.

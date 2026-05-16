@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -29,14 +30,18 @@ from datetime import datetime, timedelta, date, time as dtime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-WORKSPACE = Path("/Users/parikshitgangaher/Codes/workspace-broker")
+WORKSPACE = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = WORKSPACE / "Scripts"
 PROMPTS_DIR = SCRIPTS_DIR / "prompts"
 LOGS_DIR = WORKSPACE / "Logs"
 SESSIONS_DIR = LOGS_DIR / "sessions"
 SCHEDULER_LOG = LOGS_DIR / "scheduler.log"
+ERRORS_LOG = LOGS_DIR / "scheduler.errors.log"
 META_PATH = SCRIPTS_DIR / "strategy_meta.json"
 HOLIDAYS_PATH = SCRIPTS_DIR / "holidays.json"
+
+MISSED_THRESHOLD_MINUTES = 90   # only check firings older than this
+FIRE_SEARCH_WINDOW_HOURS = 3    # FIRE within this many hours of scheduled time counts
 
 IST = ZoneInfo("Asia/Kolkata")
 ET = ZoneInfo("America/New_York")
@@ -80,6 +85,14 @@ def log_line(msg: str) -> None:
     sys.stdout.flush()
     with SCHEDULER_LOG.open("a") as f:
         f.write(line)
+
+
+def log_error(msg: str) -> None:
+    """Write to scheduler.log AND scheduler.errors.log (errors-only view)."""
+    log_line(msg)
+    ts = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S %z")
+    with ERRORS_LOG.open("a") as f:
+        f.write(f"[{ts}] {msg}\n")
 
 
 def load_holidays() -> dict:
@@ -168,6 +181,117 @@ def next_firings(now_utc: datetime, meta: dict, holidays: dict, lookahead_days: 
     return out
 
 
+def firings_in_window(start_utc: datetime, end_utc: datetime, meta: dict, holidays: dict) -> list[Firing]:
+    """Return all sessions that were scheduled between start_utc and end_utc."""
+    out: list[Firing] = []
+    strategy_end = date.fromisoformat(meta["strategy_end"])
+    month_end_date = strategy_end
+    days_span = (end_utc.astimezone(IST).date() - start_utc.astimezone(IST).date()).days + 2
+    base_date = start_utc.astimezone(IST).date()
+    for delta in range(days_span):
+        d = base_date + timedelta(days=delta)
+        for sid, market, kind, t, tz in SESSIONS:
+            if kind == "WEEKEND":
+                if d.weekday() != 5:
+                    continue
+                fire_local = datetime.combine(d, t, tzinfo=tz)
+            elif kind == "MONTH_END":
+                if d != month_end_date:
+                    continue
+                fire_local = datetime.combine(d, t, tzinfo=tz)
+            else:
+                if market in ("US", "IN") and not is_trading_day(d, market, holidays):
+                    continue
+                effective_t = t
+                if market == "US" and kind == "CLOSE":
+                    ec = early_close_time(d, holidays)
+                    if ec is not None:
+                        effective_t = ec
+                fire_local = datetime.combine(d, effective_t, tzinfo=tz)
+            fire_utc = fire_local.astimezone(UTC)
+            if not (start_utc <= fire_utc <= end_utc):
+                continue
+            if d > strategy_end and kind != "MONTH_END":
+                continue
+            out.append(Firing(when_utc=fire_utc, session_id=sid, market=market))
+    out.sort(key=lambda f: f.when_utc)
+    return out
+
+
+_LOG_EVENT_RE = re.compile(
+    r'^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [+-]\d{4})\] (FIRE|DONE|MISSED|INCOMPLETE) (\w+)'
+)
+
+
+def parse_scheduler_log_events() -> list[tuple[datetime, str, str]]:
+    """Parse scheduler.log into (timestamp_utc, event_type, session_id) tuples."""
+    if not SCHEDULER_LOG.exists():
+        return []
+    events: list[tuple[datetime, str, str]] = []
+    with SCHEDULER_LOG.open() as f:
+        for line in f:
+            m = _LOG_EVENT_RE.match(line)
+            if m:
+                ts_str, event, session_id = m.groups()
+                dt = datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S %z").astimezone(UTC)
+                events.append((dt, event, session_id))
+    return events
+
+
+def check_missed_sessions(meta: dict, holidays: dict) -> None:
+    """On startup, scan the past 24h for sessions that fired late or not at all."""
+    now_utc = datetime.now(UTC)
+    # Only examine firings old enough that they should have completed.
+    cutoff_utc = now_utc - timedelta(minutes=MISSED_THRESHOLD_MINUTES)
+    since_utc = now_utc - timedelta(hours=24)
+
+    expected = firings_in_window(since_utc, cutoff_utc, meta, holidays)
+    if not expected:
+        return
+
+    events = parse_scheduler_log_events()
+
+    for firing in expected:
+        sched_time = firing.when_utc
+        sched_ist = sched_time.astimezone(IST).strftime("%Y-%m-%d %H:%M IST")
+
+        # Skip if already flagged (avoids duplicate entries on repeated restarts).
+        already_flagged = any(
+            ev_type in ("MISSED", "INCOMPLETE") and ev_sid == firing.session_id
+            and abs((ev_ts - sched_time).total_seconds()) <= FIRE_SEARCH_WINDOW_HOURS * 3600
+            for ev_ts, ev_type, ev_sid in events
+        )
+        if already_flagged:
+            continue
+
+        # Look for FIRE within [sched_time - 5 min, sched_time + FIRE_SEARCH_WINDOW_HOURS].
+        fire_events = [
+            ev_ts for ev_ts, ev_type, ev_sid in events
+            if ev_type == "FIRE" and ev_sid == firing.session_id
+            and -300 <= (ev_ts - sched_time).total_seconds() <= FIRE_SEARCH_WINDOW_HOURS * 3600
+        ]
+
+        if not fire_events:
+            log_error(
+                f"MISSED {firing.session_id} | scheduled={sched_ist}"
+                f" | no FIRE found within {FIRE_SEARCH_WINDOW_HOURS}h of scheduled time"
+            )
+            continue
+
+        # FIRE found — check if DONE arrived within 2h of the last relevant fire.
+        last_fire_ts = max(fire_events)
+        done_found = any(
+            ev_type == "DONE" and ev_sid == firing.session_id
+            and 0 <= (ev_ts - last_fire_ts).total_seconds() <= 2 * 3600
+            for ev_ts, ev_type, ev_sid in events
+        )
+        if not done_found:
+            log_error(
+                f"INCOMPLETE {firing.session_id} | scheduled={sched_ist}"
+                f" | FIRE at {last_fire_ts.astimezone(IST).strftime('%H:%M IST')} but no DONE within 2h"
+            )
+
+
 def prompt_path(session_id: str) -> Path:
     return PROMPTS_DIR / f"{session_id.lower()}.md"
 
@@ -236,6 +360,7 @@ def invoke_claude(session_id: str, dry_run: bool = False) -> int:
             logf.write(f"# session={session_id} fired_at={when.astimezone(IST).isoformat()}\n")
             logf.write(f"# prefetch={'ok' if prefetch_ok else 'FAILED'}\n\n")
             logf.flush()
+            t0 = time.monotonic()
             proc = subprocess.run(
                 cmd,
                 input=prompt_text,
@@ -246,7 +371,8 @@ def invoke_claude(session_id: str, dry_run: bool = False) -> int:
                 timeout=60 * 60,  # 1h max per session
                 text=True,
             )
-        log_line(f"DONE {session_id} | exit={proc.returncode}")
+            elapsed = int(time.monotonic() - t0)
+        log_line(f"DONE {session_id} | exit={proc.returncode} | elapsed={elapsed}s")
         return proc.returncode
     except FileNotFoundError:
         log_line(f"ERROR claude CLI not found in PATH; install Claude Code or update PATH in launchd plist")
@@ -258,7 +384,9 @@ def invoke_claude(session_id: str, dry_run: bool = False) -> int:
 
 def run_forever(dry_run: bool = False) -> None:
     meta = load_or_init_meta()
+    holidays = load_holidays()
     log_line(f"scheduler start | strategy_start={meta['strategy_start']} strategy_end={meta['strategy_end']}")
+    check_missed_sessions(meta, holidays)
     while True:
         holidays = load_holidays()
         meta = load_or_init_meta()

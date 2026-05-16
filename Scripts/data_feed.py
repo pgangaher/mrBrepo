@@ -6,6 +6,7 @@ Mr.B suffixes:
 """
 from __future__ import annotations
 
+import sys
 import time
 
 import pandas as pd
@@ -60,8 +61,8 @@ def fetch_quote(ticker: str) -> dict:
                 "as_of": str(intraday.index[-1]),
                 "source": "yfinance-intraday-1m",
             }
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"DEBUG fetch_quote intraday fail for {sym}: {type(e).__name__}: {e}", file=sys.stderr)
 
     try:
         daily = yf.Ticker(sym).history(period="5d", auto_adjust=False)
@@ -84,14 +85,23 @@ def fetch_quote(ticker: str) -> dict:
         raise DataFeedError(f"quote fetch failed for {ticker}: {e}")
 
 
-def fetch_benchmark(market: str, period: str = "1y") -> pd.DataFrame:
+def fetch_benchmark(market: str, period: str = "1y", retries: int = 3) -> pd.DataFrame:
     sym = BENCHMARKS.get(market)
     if not sym:
         raise DataFeedError(f"unknown market: {market}")
-    df = yf.Ticker(sym).history(period=period, auto_adjust=False)
-    if df.empty:
-        raise DataFeedError(f"empty benchmark history for {market} ({sym})")
-    return df.rename_axis("Date").reset_index()
+    last_err = None
+    for attempt in range(retries):
+        try:
+            df = yf.Ticker(sym).history(period=period, auto_adjust=False)
+            if df.empty:
+                raise DataFeedError(f"empty benchmark history for {market} ({sym})")
+            return df.rename_axis("Date").reset_index()
+        except DataFeedError:
+            raise
+        except Exception as e:
+            last_err = e
+            time.sleep(1.5 ** attempt)
+    raise DataFeedError(f"failed to fetch benchmark {market} ({sym}) after {retries} retries: {last_err}")
 
 
 def fetch_vol_gauge(market: str) -> float | None:

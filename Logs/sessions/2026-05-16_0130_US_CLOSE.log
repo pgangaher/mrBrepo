@@ -1,0 +1,33 @@
+# session=US_CLOSE fired_at=2026-05-16T01:30:00.144882+05:30
+# prefetch=ok
+
+All artifacts verified. Session complete.
+
+---
+
+## US_CLOSE Session — 2026-05-15 Complete
+
+**US Sub-Portfolio EOD:**
+| | |
+|---|---|
+| NAV | $9,933.32 (↓ from $10,000.00) |
+| Day P&L | −$66.68 (−0.67%) |
+| Drawdown | 0.67% — **DEFENSIVE MODE NOT ACTIVE** |
+| Open positions | 3 (NVDA, CAT, GOOGL) |
+| Deployed | 24.0% |
+
+**Positions at close:**
+- **NVDA.US** $225.30 — ⚠️ **CRITICAL**: Stop $224.98 with only $0.32 / 0.14% buffer. Intraday low $224.25 breached stop for second consecutive session; close price keeps position alive per paper-trade rules. **Next-session priority #1.**
+- **CAT.US** $888.74 — ⚠️ ELEVATED: $10.37 / 1.17% above stop $878.37. Day low came within $1.83 of stop.
+- **GOOGL.US** $396.46 — ✓ Stable at −0.21% from entry; best risk-adjusted position.
+
+**Stops triggered:** NONE | **Targets hit:** NONE
+
+**Artifacts written:**
+- `Portfolio/state/US/portfolio_state_2026-05-15-v3.md` ✓
+- `Logs/daily_pnl_US.md` appended ✓
+- `Logs/Recommendations_2026-05-15.md` appended (#23–#25 + US close summary) ✓
+- `Logs/sessions/2026-05-15_US_CLOSE.md` ✓
+- `Dashboard/dashboard_data.js` **REFRESHED** ✓
+
+**Critical watch for next US_OPEN (2026-05-15 ~19:00 IST):** NVDA stop at $224.98 — if open price < $224.98, execute paper close immediately. Also: NVDA earnings ~May 28, triple-check required May 21.

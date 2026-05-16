@@ -12,3 +12,27 @@
 [2026-05-15 09:42:47 +0530] next: IN_MIDDAY at 2026-05-15 12:30 IST (in 10032s)
 [2026-05-15 10:00:22 +0530] scheduler start | strategy_start=2026-05-14 strategy_end=2026-06-13
 [2026-05-15 10:00:22 +0530] next: IN_MIDDAY at 2026-05-15 12:30 IST (in 8977s)
+[2026-05-15 12:30:27 +0530] PREFETCH_OK IN_MIDDAY | snapshots=Scripts/cache/snapshot_IN_2026-05-15_1230.json
+[2026-05-15 12:30:27 +0530] FIRE IN_MIDDAY | prompt=in_midday.md | log=2026-05-15_1230_IN_MIDDAY.log | prefetch=ok
+[2026-05-15 12:38:56 +0530] DONE IN_MIDDAY | exit=0
+[2026-05-15 12:38:56 +0530] next: IN_CLOSE at 2026-05-15 15:30 IST (in 10263s)
+[2026-05-15 15:30:33 +0530] PREFETCH_OK IN_CLOSE | snapshots=Scripts/cache/snapshot_IN_2026-05-15_153033.json
+[2026-05-15 15:30:33 +0530] FIRE IN_CLOSE | prompt=in_close.md | log=2026-05-15_1530_IN_CLOSE.log | prefetch=ok
+[2026-05-15 15:39:08 +0530] DONE IN_CLOSE | exit=0
+[2026-05-15 15:39:08 +0530] next: US_OPEN at 2026-05-15 19:00 IST (in 12051s)
+[2026-05-15 19:00:32 +0530] PREFETCH_OK US_OPEN | snapshots=Scripts/cache/snapshot_US_2026-05-15_190032.json
+[2026-05-15 19:00:32 +0530] FIRE US_OPEN | prompt=us_open.md | log=2026-05-15_1900_US_OPEN.log | prefetch=ok
+[2026-05-15 19:14:05 +0530] DONE US_OPEN | exit=0
+[2026-05-15 19:14:05 +0530] next: US_MIDDAY at 2026-05-15 22:00 IST (in 9954s)
+[2026-05-15 22:00:28 +0530] PREFETCH_OK US_MIDDAY | snapshots=Scripts/cache/snapshot_US_2026-05-15_220028.json
+[2026-05-15 22:00:28 +0530] FIRE US_MIDDAY | prompt=us_midday.md | log=2026-05-15_2200_US_MIDDAY.log | prefetch=ok
+[2026-05-15 22:07:08 +0530] DONE US_MIDDAY | exit=0
+[2026-05-15 22:07:08 +0530] next: US_CLOSE at 2026-05-16 01:30 IST (in 12171s)
+[2026-05-16 01:30:28 +0530] PREFETCH_OK US_CLOSE | snapshots=Scripts/cache/snapshot_US_2026-05-16_013028.json
+[2026-05-16 01:30:28 +0530] FIRE US_CLOSE | prompt=us_close.md | log=2026-05-16_0130_US_CLOSE.log | prefetch=ok
+[2026-05-16 01:40:20 +0530] DONE US_CLOSE | exit=0
+[2026-05-16 01:40:20 +0530] next: WEEKEND_REVIEW at 2026-05-16 10:00 IST (in 29979s)
+[2026-05-16 10:00:50 +0530] PREFETCH_OK WEEKEND_REVIEW | snapshots=Scripts/cache/snapshot_IN_2026-05-16_100026.json,Scripts/cache/snapshot_US_2026-05-16_100050.json
+[2026-05-16 10:00:50 +0530] FIRE WEEKEND_REVIEW | prompt=weekend_review.md | log=2026-05-16_1000_WEEKEND_REVIEW.log | prefetch=ok
+[2026-05-16 10:11:23 +0530] DONE WEEKEND_REVIEW | exit=0
+[2026-05-16 10:11:23 +0530] next: IN_OPEN at 2026-05-18 09:15 IST (in 169416s)

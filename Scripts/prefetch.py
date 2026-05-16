@@ -69,7 +69,7 @@ def today_str() -> str:
 
 
 def session_clock() -> str:
-    return datetime.now(IST).strftime("%H%M")
+    return datetime.now(IST).strftime("%H%M%S")
 
 
 def load_watchlist(market: str) -> list[str]:
